@@ -1,12 +1,37 @@
 import * as dotenv from 'dotenv';
+import * as readline from 'readline'; // Import readline
 import { GSConnection } from './connection';
-import { Course } from './types';
+import { Course, Assignment } from './types';
 import { DateTime } from 'luxon';
+import { performance } from 'perf_hooks'; // Import performance
+
+// Define types for the Promise.all result
+type AssignmentFetchSuccess = { courseId: string; assignments: Assignment[]; error?: false };
+type AssignmentFetchError = { courseId: string; assignments: []; error: true };
+type AssignmentFetchResult = AssignmentFetchSuccess | AssignmentFetchError;
+
+// Function to ask user for term
+function askForTerm(query: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise(resolve => rl.question(query, ans => {
+    rl.close();
+    resolve(ans.trim()); // Trim whitespace from the answer
+  }))
+}
 
 // Load environment variables
 dotenv.config();
 
 async function main() {
+  // Ask the user for the target term first
+  const targetTerm = await askForTerm('Enter the term to filter by (e.g., spring 2025, fall 2024), or press Enter for all terms: ');
+  
+  const startTime = performance.now(); // Record start time after input
+
   const email = process.env.GRADESCOPE_EMAIL;
   const password = process.env.GRADESCOPE_PASSWORD;
 
@@ -24,60 +49,137 @@ async function main() {
     process.exit(1);
   }
 
-  const courses = await gs.account.get_courses();
-  
-  console.log('\nYour courses:');
-  console.log('-------------');
-  
-  console.log('\nStudent courses:');
-  for (const [id, course] of Object.entries(courses.student)) {
-    const typedCourse = course as Course;
-    console.log(`- ${typedCourse.name} (${typedCourse.term}) [ID: ${id}]`);
+  // Fetch all courses first
+  const allCourses = await gs.account.get_courses();
+
+  // --- Filtering Logic ---
+  let filteredCourses: { student: Record<string, Course>; instructor: Record<string, Course>; } = { student: {}, instructor: {} };
+  let courseCount = 0;
+
+  if (targetTerm) {
+    console.log(`\nFiltering for term: "${targetTerm}"`);
+    
+    // Filter student courses
+    for (const [id, course] of Object.entries(allCourses.student)) {
+      if (course.term && course.term.toLowerCase() === targetTerm.toLowerCase()) {
+        filteredCourses.student[id] = course;
+        courseCount++;
+      }
+    }
+    // Filter instructor courses
+    for (const [id, course] of Object.entries(allCourses.instructor)) {
+       if (course.term && course.term.toLowerCase() === targetTerm.toLowerCase()) {
+        filteredCourses.instructor[id] = course;
+        courseCount++;
+      }
+    }
+    
+    if (courseCount === 0) {
+      console.log(`No courses found for term "${targetTerm}".`);
+      // Optionally exit if no courses found for the specific term
+      // process.exit(0); 
+    }
+  } else {
+    console.log('\nNo specific term provided. Showing all courses.');
+    filteredCourses = allCourses; // Use all courses if no term specified
+    courseCount = Object.keys(allCourses.student).length + Object.keys(allCourses.instructor).length;
+  }
+  // --- End Filtering Logic ---
+
+  // Print the filtered course list
+  if (courseCount > 0) {
+    console.log('\nYour courses' + (targetTerm ? ` for ${targetTerm}` : '') + ':');
+    console.log('-------------');
+    
+    if (Object.keys(filteredCourses.student).length > 0) {
+        console.log('\nStudent courses:');
+        for (const [id, course] of Object.entries(filteredCourses.student)) {
+            const typedCourse = course as Course;
+            console.log(`Title: ${typedCourse.name}`);
+            console.log(`Term: ${typedCourse.term}`);
+            console.log(`ID: ${id}`);
+            console.log(''); // Add a blank line for separation
+        }
+    }
+
+    if (Object.keys(filteredCourses.instructor).length > 0) {
+        console.log('\nInstructor courses:');
+        for (const [id, course] of Object.entries(filteredCourses.instructor)) {
+            const typedCourse = course as Course;
+            console.log(`Title: ${typedCourse.name}`);
+            console.log(`Term: ${typedCourse.term}`);
+            console.log(`ID: ${id}`);
+            console.log(''); // Add a blank line for separation
+        }
+    }
   }
 
-  console.log('\nInstructor courses:');
-  for (const [id, course] of Object.entries(courses.instructor)) {
-    const typedCourse = course as Course;
-    console.log(`- ${typedCourse.name} (${typedCourse.term}) [ID: ${id}]`);
-  }
+  // Get assignments ONLY for filtered student courses concurrently
+  if (Object.keys(filteredCourses.student).length > 0) {
+    console.log('\nFetching assignments concurrently for filtered student courses...');
 
-  // Get assignments for all student courses
-  console.log('\nFetching assignments for all student courses...');
-  for (const courseId of Object.keys(courses.student)) {
-    const courseName = (courses.student[courseId] as Course).name;
-    console.log(`\nAssignments for course: ${courseName} (${courseId})`);
-    console.log('------------------------------------------');
-    try {
-      const assignments = await gs.account.get_assignments(courseId);
+    // Create an array of promises, one for each course's assignments
+    const assignmentPromises: Promise<AssignmentFetchResult>[] = Object.keys(filteredCourses.student).map(courseId => 
+      gs.account!.get_assignments(courseId)
+        .then((assignments): AssignmentFetchSuccess => ({ courseId, assignments })) // Type assertion for success
+        .catch((error): AssignmentFetchError => { // Type assertion for error
+          console.error(`Error fetching assignments for course ${courseId}:`, error);
+          return { courseId, assignments: [], error: true };
+        })
+    );
+
+    // Wait for all assignment fetches to complete
+    const results: AssignmentFetchResult[] = await Promise.all(assignmentPromises);
+
+    // Process results after all fetches are done
+    for (const result of results) {
+      // Check if the result is an error object before accessing error property
+      if (result.error) { 
+          continue; // Skip if there was an error fetching for this course
+      }
+
+      // If it's not an error, it must be a success object
+      const { courseId, assignments } = result; // Destructure safely now
+
+      const courseName = (filteredCourses.student[courseId] as Course).name;
+      const courseTerm = (filteredCourses.student[courseId] as Course).term;
+
+      console.log(`\nAssignments for course: ${courseName} (${courseTerm} - ${courseId})`);
+      console.log('------------------------------------------');
       console.log(`Found ${assignments.length} assignments:\n`);
-      
-      if (assignments.length === 0) {
+
+      if (assignments.length === 0) { // No need to check result.error here
         console.log("(No assignments found for this course)");
       } else {
         for (const assignment of assignments) {
           console.log(`- ${assignment.name}`);
           if (assignment.release_date) {
-            console.log(`  Released: ${assignment.release_date.toLocaleString(DateTime.DATETIME_SHORT)}`);
+            console.log(`  Released: ${assignment.release_date.toString()}`);
           }
           if (assignment.due_date) {
-            console.log(`  Due: ${assignment.due_date.toLocaleString(DateTime.DATETIME_SHORT)}`);
+            console.log(`  Due: ${assignment.due_date.toString()}`);
           }
           if (assignment.late_due_date) {
-            console.log(`  Late Due: ${assignment.late_due_date.toLocaleString(DateTime.DATETIME_SHORT)}`);
+            console.log(`  Late Due: ${assignment.late_due_date.toString()}`);
           }
           if (assignment.grade !== null && assignment.max_grade !== null) {
             console.log(`  Grade: ${assignment.grade}/${assignment.max_grade}`);
           } else if (assignment.grade !== null) {
-            console.log(`  Grade: ${assignment.grade}`); // Handle cases where max_grade might be null
+            console.log(`  Grade: ${assignment.grade}`);
           }
           console.log(`  Status: ${assignment.submissions_status}`);
-          console.log(''); // Add a blank line for readability
+          console.log('');
         }
       }
-    } catch (error) {
-        console.error(`Error fetching assignments for course ${courseId}:`, error);
     }
+  } else if (targetTerm) {
+    console.log("\nNo student courses found for the specified term to fetch assignments from.");
   }
+
+  const endTime = performance.now(); // Record end time
+  const durationSeconds = ((endTime - startTime) / 1000).toFixed(2); // Calculate duration in seconds
+  console.log(`\n------------------------------------------`);
+  console.log(`Script finished in ${durationSeconds} seconds.`);
 }
 
 main().catch(console.error); 
