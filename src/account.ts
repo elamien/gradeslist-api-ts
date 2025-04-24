@@ -91,7 +91,7 @@ export class Account {
     async get_courses(): Promise<CourseList> {
         const response = await axios.get('https://www.gradescope.com/account', {
             headers: {
-                Cookie: this.connection.getCookies()
+                Cookie: this.connection.getCookies() 
             }
         });
 
@@ -141,7 +141,7 @@ export class Account {
                 if ($anchor.length > 0) {
                     name = $anchor.text()?.trim();
                     const href = $anchor.attr('href');
-                    assignment_id = href?.split('/').pop() || href?.split('/')[4];
+                    assignment_id = href?.split('/').pop() || href?.split('/')[4]; 
                 } else if ($button.length > 0) {
                     name = $button.text()?.trim();
                     assignment_id = $button.data('assignment-id'); // Use .data() for data attributes
@@ -158,7 +158,7 @@ export class Account {
                          return; // Use Cheerio's return to continue .each loop
                     }
                 }
-
+                
                 if (!name || !assignment_id) {
                     console.error('Critical Error: Failed to determine name or ID for row. Skipping.', $.html($row));
                     return; // Continue .each loop
@@ -183,7 +183,7 @@ export class Account {
                     submissions_status = 'Graded';
                 } else if ($statusCell.text()?.includes('Submitted')) {
                      submissions_status = 'Submitted';
-                }
+                } 
 
                 if ($statusCell.text()?.includes('Late')) {
                     submissions_status += ' (Late)';

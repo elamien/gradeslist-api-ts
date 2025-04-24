@@ -51,7 +51,7 @@ async function main() {
 
   // Fetch all courses first
   const allCourses = await gs.account.get_courses();
-
+  
   // --- Filtering Logic ---
   let filteredCourses: { student: Record<string, Course>; instructor: Record<string, Course>; } = { student: {}, instructor: {} };
   let courseCount = 0;
@@ -91,12 +91,12 @@ async function main() {
   // Print the filtered course list
   if (courseCount > 0) {
     console.log('\nYour courses' + (targetTerm ? ` for ${targetTerm}` : '') + ':');
-    console.log('-------------');
-    
+  console.log('-------------');
+  
     if (Object.keys(filteredCourses.student).length > 0) {
-        console.log('\nStudent courses:');
+  console.log('\nStudent courses:');
         for (const [id, course] of Object.entries(filteredCourses.student)) {
-            const typedCourse = course as Course;
+    const typedCourse = course as Course;
             console.log(`Title: ${typedCourse.name}`);
             console.log(`Term: ${typedCourse.term}`);
             console.log(`ID: ${id}`);
@@ -105,9 +105,9 @@ async function main() {
     }
 
     if (Object.keys(filteredCourses.instructor).length > 0) {
-        console.log('\nInstructor courses:');
+  console.log('\nInstructor courses:');
         for (const [id, course] of Object.entries(filteredCourses.instructor)) {
-            const typedCourse = course as Course;
+    const typedCourse = course as Course;
             console.log(`Title: ${typedCourse.name}`);
             console.log(`Term: ${typedCourse.term}`);
             console.log(`ID: ${id}`);
@@ -147,9 +147,9 @@ async function main() {
       const courseTerm = (filteredCourses.student[courseId] as Course).term;
 
       console.log(`\nAssignments for course: ${courseName} (${courseTerm} - ${courseId})`);
-      console.log('------------------------------------------');
+    console.log('------------------------------------------');
       console.log(`Found ${assignments.length} assignments:\n`);
-
+      
       if (assignments.length === 0) { // No need to check result.error here
         console.log("(No assignments found for this course)");
       } else {
