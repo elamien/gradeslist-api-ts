@@ -11,6 +11,8 @@
     "build": "rm -rf dist && tsc",
     "start": "npm run build && node dist/example.js",
     "start:dev": "ts-node src/example.ts",
+    "list-courses": "npm run build && node dist/list-courses.js",
+    "list-courses:dev": "ts-node src/list-courses.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": ["gradescope", "api", "scraper", "typescript"],
