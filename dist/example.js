@@ -76,15 +76,17 @@ async function main() {
         console.log(`\nFiltering for term: "${targetTerm}"`);
         // Filter student courses
         for (const [id, course] of Object.entries(allCourses.student)) {
-            if (course.term && course.term.toLowerCase() === targetTerm.toLowerCase()) {
-                filteredCourses.student[id] = course;
+            const typedCourse = course;
+            if (typedCourse.term && typedCourse.term.toLowerCase() === targetTerm.toLowerCase()) {
+                filteredCourses.student[id] = typedCourse;
                 courseCount++;
             }
         }
         // Filter instructor courses
         for (const [id, course] of Object.entries(allCourses.instructor)) {
-            if (course.term && course.term.toLowerCase() === targetTerm.toLowerCase()) {
-                filteredCourses.instructor[id] = course;
+            const typedCourse = course;
+            if (typedCourse.term && typedCourse.term.toLowerCase() === targetTerm.toLowerCase()) {
+                filteredCourses.instructor[id] = typedCourse;
                 courseCount++;
             }
         }
@@ -130,7 +132,7 @@ async function main() {
         console.log('\nFetching assignments concurrently for filtered student courses...');
         // Create an array of promises, one for each course's assignments
         const assignmentPromises = Object.keys(filteredCourses.student).map(courseId => gs.account.get_assignments(courseId)
-            .then((assignments) => ({ courseId, assignments })) // Type assertion for success
+            .then((assignments) => ({ courseId, assignments }))
             .catch((error) => {
             console.error(`Error fetching assignments for course ${courseId}:`, error);
             return { courseId, assignments: [], error: true };
