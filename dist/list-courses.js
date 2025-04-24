@@ -101,27 +101,29 @@ async function main() {
         courseCount = Object.keys(allCourses.student).length + Object.keys(allCourses.instructor).length;
     }
     // --- End Filtering Logic ---
-    // --- Print ONLY Course Titles ---
+    // --- Print Courses in Specified Format ---
     if (courseCount > 0) {
-        console.log('\nFiltered Course Titles:');
-        console.log('-------------------------');
+        // Removed old header
+        console.log('\n--- Courses Found ---'); // Add new header
         const allFilteredCourses = [
             ...Object.values(filteredCourses.student),
             ...Object.values(filteredCourses.instructor)
         ];
-        // Print titles directly in the desired format
+        // Print courses in the new format
         allFilteredCourses.forEach(course => {
-            console.log(`Title: ${course.name}`);
+            console.log(`  Name: ${course.name}`); // Indented Name
+            console.log(`  ID:   ${course.id}`); // Indented ID (aligned)
+            console.log(`  --------------------`); // Separator
         });
+        console.log(`--- End Courses ---`); // Add new footer
     }
     else if (!targetTerm) {
         console.log("\nNo courses found on the account.");
     }
     else {
-        // This handles the case where a term was specified but no courses were found
-        // The "No courses found for term..." message is already printed in the filtering logic
+        // No message needed here, already handled in filtering logic
     }
-    // --- End Printing Titles ---
+    // --- End Printing Courses ---
     const endTime = perf_hooks_1.performance.now(); // Record end time
     const durationSeconds = ((endTime - startTime) / 1000).toFixed(2); // Calculate duration
     console.log(`\n------------------------------------------`);
