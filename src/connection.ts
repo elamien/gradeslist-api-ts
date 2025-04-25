@@ -57,6 +57,20 @@ export class GSConnection implements IGSConnection {
     });
   }
 
+  /**
+   * Fetches the HTML content of a given URL using the current session.
+   * Assumes the user is already logged in.
+   * @param url The full URL to fetch.
+   * @returns A promise resolving to the HTML content as a string.
+   */
+  async getHtml(url: string): Promise<string> {
+    if (!this.account) { // Use this.account as proxy for logged_in state post-refactor
+      throw new Error('Not logged in. Call login() first.');
+    }
+    const response = await this.session.get(url);
+    return response.data;
+  }
+
   getCookies(): string {
     return this.cookies;
   }

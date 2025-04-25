@@ -133,33 +133,53 @@ export class Account {
                 const $row = $(rowElement); // Wrap row element
                 const $nameCell = $row.find('th.table--primaryLink');
                 const $anchor = $nameCell.find('a');
-                const $button = $nameCell.find('button.js-submitAssignment');
+                // const $button = $nameCell.find('button.js-submitAssignment'); // Button check seems less reliable
 
                 let name: string | undefined = undefined;
                 let assignment_id: string | undefined = undefined;
+                let submission_id: string | undefined = undefined; // Variable to store submission ID
+                let isPlaceholderId = false;
 
                 if ($anchor.length > 0) {
                     name = $anchor.text()?.trim();
                     const href = $anchor.attr('href');
-                    assignment_id = href?.split('/').pop() || href?.split('/')[4]; 
-                } else if ($button.length > 0) {
-                    name = $button.text()?.trim();
-                    assignment_id = $button.data('assignment-id'); // Use .data() for data attributes
+                    if (href) {
+                         const parts = href.split('/').filter(part => part !== ''); 
+                         // Check if the link is a submission link
+                         const submissionsIndex = parts.indexOf('submissions');
+                         if (submissionsIndex !== -1 && submissionsIndex + 1 < parts.length) {
+                             // Format: /courses/{c_id}/assignments/{a_id}/submissions/{s_id}
+                             submission_id = parts[submissionsIndex + 1];
+                             assignment_id = parts[submissionsIndex - 1];
+                         } else if (parts.indexOf('assignments') !== -1 && parts.indexOf('assignments') + 1 < parts.length) {
+                             // Format: /courses/{c_id}/assignments/{a_id}
+                             assignment_id = parts[parts.indexOf('assignments') + 1];
+                         } else {
+                             // Fallback or unexpected format, try getting last part
+                              assignment_id = parts.pop(); 
+                         }
+                    }
+                    // If href is missing or ID extraction fails, fall through to placeholder logic below
+
+                } else {
+                     // If no anchor link, try getting name directly from cell for placeholder generation
+                    name = $nameCell.text()?.trim();
                 }
 
-                if (!assignment_id) { // Check if ID wasn't found via link or button
-                    name = $nameCell.text()?.trim();
+                // If ID wasn't found via anchor, or name is missing, generate placeholder or skip
+                if (!assignment_id) {
                     if (name) {
                         const slugifiedName = name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
                         assignment_id = `${courseId}-placeholder-${slugifiedName}`;
-                        console.warn(`Warning: Generated placeholder ID "${assignment_id}" for assignment "${name}" (no link or button found).`);
+                        isPlaceholderId = true; // Mark this ID as a placeholder
+                        // console.warn(`Warning: Generated placeholder ID "${assignment_id}" for assignment "${name}" (no link found).`);
                     } else {
                          console.warn('Skipping row: Could not find assignment name.', $.html($row));
                          return; // Use Cheerio's return to continue .each loop
                     }
                 }
                 
-                if (!name || !assignment_id) {
+                if (!name || !assignment_id) { // Should ideally not happen now, but keep check
                     console.error('Critical Error: Failed to determine name or ID for row. Skipping.', $.html($row));
                     return; // Continue .each loop
                 }
@@ -194,14 +214,15 @@ export class Account {
                 const lateDueDate = dueDateElements.length > 1 ? this.parseDate($, dueDateElements[1]) : null;
 
                 const assignment: Assignment = {
-                    assignment_id,
+                    id: assignment_id,
                     name,
                     release_date: releaseDate,
                     due_date: dueDate,
                     late_due_date: lateDueDate,
                     submissions_status,
                     grade,
-                    max_grade
+                    max_grade,
+                    submission_id // Add submission_id here
                 };
 
                 assignments.push(assignment);

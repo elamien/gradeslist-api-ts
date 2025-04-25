@@ -10,6 +10,8 @@
   "scripts": {
     "build": "rm -rf dist && tsc",
     "start": "ts-node src/example.ts",
+    "get-submission": "ts-node src/get-submission-details.ts",
+    "list-submissions": "ts-node src/list-assignments-with-submission-time.ts",
     "list-courses": "npm run build && node dist/list-courses.js",
     "list-courses:dev": "ts-node src/list-courses.ts",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon';
 
 export interface Assignment {
-  assignment_id: string;
+  id: string;
   name: string;
   release_date: DateTime | null;
   due_date: DateTime | null;
@@ -9,6 +9,7 @@ export interface Assignment {
   submissions_status: string;
   grade: number | null;
   max_grade: number | null;
+  submission_id?: string;
 }
 
 export interface Course {
