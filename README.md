@@ -1,6 +1,6 @@
 # gradescope-api-ts
 
-A TypeScript library for interacting with Gradescope (via web scraping).
+A TypeScript library for interacting with Gradescope. (Inspired by https://github.com/nyuoss/gradescope-api)
 
 ## Setup
 
