@@ -34,11 +34,3 @@ The `src/example.ts` file demonstrates basic usage:
 ```bash
 npm start
 ```
-
-## Contributing
-
-*(Add contribution guidelines here)*
-
-## License
-
-ISC 
